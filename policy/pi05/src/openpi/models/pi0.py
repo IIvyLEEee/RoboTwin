@@ -277,3 +277,56 @@ class Pi0(_model.BaseModel):
 
         x_0, _ = jax.lax.while_loop(cond, step, (noise, 1.0))
         return x_0
+
+    def profile_embed_prefix(
+        self, observation: _model.Observation
+    ) -> tuple[
+        _model.Observation,
+        at.Float[at.Array, "b s emb"],
+        at.Bool[at.Array, "b s"],
+        at.Bool[at.Array, " s"],
+    ]:
+        observation = _model.preprocess_observation(None, observation, train=False)
+        prefix_tokens, prefix_mask, prefix_ar_mask = self.embed_prefix(observation)
+        return observation, prefix_tokens, prefix_mask, prefix_ar_mask
+
+    def profile_prefill(
+        self,
+        prefix_tokens: at.Float[at.Array, "b s emb"],
+        prefix_mask: at.Bool[at.Array, "b s"],
+        prefix_ar_mask: at.Bool[at.Array, " s"],
+    ):
+        prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
+        positions = jnp.cumsum(prefix_mask, axis=1) - 1
+        _, kv_cache = self.PaliGemma.llm([prefix_tokens, None], mask=prefix_attn_mask, positions=positions)
+        return kv_cache
+
+    def profile_denoise_step(
+        self,
+        observation: _model.Observation,
+        prefix_tokens: at.Float[at.Array, "b s emb"],
+        prefix_mask: at.Bool[at.Array, "b s"],
+        kv_cache,
+        x_t: _model.Actions,
+        time: at.Float[at.Array, ""],
+        dt: at.Float[at.Array, ""],
+    ) -> tuple[_model.Actions, at.Float[at.Array, ""]]:
+        batch_size = observation.state.shape[0]
+        suffix_tokens, suffix_mask, suffix_ar_mask, adarms_cond = self.embed_suffix(
+            observation, x_t, jnp.broadcast_to(time, batch_size)
+        )
+        suffix_attn_mask = make_attn_mask(suffix_mask, suffix_ar_mask)
+        prefix_attn_mask = einops.repeat(prefix_mask, "b p -> b s p", s=suffix_tokens.shape[1])
+        full_attn_mask = jnp.concatenate([prefix_attn_mask, suffix_attn_mask], axis=-1)
+        positions = jnp.sum(prefix_mask, axis=-1)[:, None] + jnp.cumsum(suffix_mask, axis=-1) - 1
+
+        (prefix_out, suffix_out), _ = self.PaliGemma.llm(
+            [None, suffix_tokens],
+            mask=full_attn_mask,
+            positions=positions,
+            kv_cache=kv_cache,
+            adarms_cond=[None, adarms_cond],
+        )
+        assert prefix_out is None
+        v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
+        return x_t + dt * v_t, time + dt

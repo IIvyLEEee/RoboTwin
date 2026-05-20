@@ -45,6 +45,8 @@ class PI0:
         self.img_size = (224, 224)
         self.observation_window = None
         self.pi0_step = pi0_step
+        self.profile_infer = os.getenv("PI05_PROFILE", "").lower() in {"1", "true", "yes", "on"}
+        self.profile_print = os.getenv("PI05_PROFILE_PRINT", "").lower() in {"1", "true", "yes", "on"}
 
     # set img_size
     def set_img_size(self, img_size):
@@ -79,7 +81,10 @@ class PI0:
 
     def get_action(self):
         assert self.observation_window is not None, "update observation_window first!"
-        return self.policy.infer(self.observation_window)["actions"]
+        result = self.policy.infer(self.observation_window, profile=self.profile_infer)
+        if self.profile_print and "policy_profile" in result:
+            print(json.dumps(result["policy_profile"], ensure_ascii=False))
+        return result["actions"]
 
     def reset_obsrvationwindows(self):
         self.instruction = None
