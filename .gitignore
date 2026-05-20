@@ -11,6 +11,9 @@ eval_video/
 task_config/
 **/.DS_Store
 
+.codex/
+.agents/
+
 # eval result
 eval_result/
 *.parquet
