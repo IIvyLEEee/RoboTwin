@@ -13,6 +13,26 @@ task_config/
 
 # eval result
 eval_result/
+*.parquet
+training_data/
+*.log
+*.tmux.log
+
+# local rollout / experiment artifacts
+.codex_tmp/
+rollout*.json
+*rollout*.json
+*_result.json
+policy/pi05/deploy_policy_*.yml
+policy/pi05/eval_*.json
+policy/pi05/eval_*.log
+pi05_collect_process_queue_*.tmux.log
+run_pi05_collect_process_queue.sh
+
+# local data/checkpoint links
+/data
+policy/pi05/process_data
+policy/pi05/checkpoints/*
 
 # Code Generation
 assets/*

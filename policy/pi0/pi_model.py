@@ -23,6 +23,7 @@ from openpi.shared import download
 from openpi.training import config as _config
 from openpi.training import data_loader as _data_loader
 
+import os
 
 class PI0:
 

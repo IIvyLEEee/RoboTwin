@@ -261,8 +261,12 @@ class Robot:
         self.communication_flag = (abs_left_curobo_yml_path != abs_right_curobo_yml_path)
 
         if self.is_dual_arm:
-            abs_left_curobo_yml_path = abs_left_curobo_yml_path.replace("curobo.yml", "curobo_left.yml")
-            abs_right_curobo_yml_path = abs_right_curobo_yml_path.replace("curobo.yml", "curobo_right.yml")
+            left_dual_arm_path = abs_left_curobo_yml_path.replace("curobo.yml", "curobo_left.yml")
+            right_dual_arm_path = abs_right_curobo_yml_path.replace("curobo.yml", "curobo_right.yml")
+
+            if os.path.exists(left_dual_arm_path) and os.path.exists(right_dual_arm_path):
+                abs_left_curobo_yml_path = left_dual_arm_path
+                abs_right_curobo_yml_path = right_dual_arm_path
 
         if not self.communication_flag:
             self.left_planner = CuroboPlanner(self.left_entity_origion_pose,

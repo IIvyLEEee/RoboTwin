@@ -5,6 +5,7 @@ episode_num: 50
 use_seed: false
 save_freq: 15
 embodiment: [aloha-agilex]
+# embodiment: [franka-panda]
 language_num: 100
 domain_randomization:
   random_background: false
